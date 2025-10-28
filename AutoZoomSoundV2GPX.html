@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Leaflet Map with Persistent Numbering & Import</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<style>
+html, body { height: 100%; margin: 0; font-family: sans-serif; }
+#map { height: 100%; width: 100%; }
+
+/* Drawer */
+#drawer {
+  position: fixed;
+  top: -260px;
+  left: 0;
+  width: 100%;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  z-index: 1001;
+  transition: top 0.3s ease;
+  padding: 10px;
+  box-sizing: border-box;
+}
+#drawer.open { top: 0; }
+
+#drawer input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  font-size:12px;
+  font-weight: bold;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+}
+
+#drawer .buttonRow { display: flex; gap: 10px; flex-wrap: wrap; }
+#drawer .buttonRow button {
+  flex: 1;
+  padding: 10px;
+  font-size: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  background: white;
+}
+#drawer .buttonRow button:hover { background: #f0f0f0; }
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
+  gap: 40px;
+  font-size: 14px;
+}
+
+/* Drawer toggle button */
+#toggleDrawerBtn {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1002;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+#toggleDrawerBtn::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 14px solid blue;
+  transition: transform 0.3s ease;
+}
+#toggleDrawerBtn.arrow-up::before { transform: rotate(180deg); }
+
+/* Bottom position bar */
+#positionBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(255,255,255,0.3);
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  padding: 6px 0;
+  z-index: 1002;
+  color: #000;
+  pointer-events: none;
+}
+
+/* Fullscreen */
+#fullscreenBtn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 1002;
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  width: 60px;
+  height: 60px;
+  font-size: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* Marker labels */
+.marker-label {
+  background: transparent;
+  border: none;
+  color: black;
+  font-weight: bold;
+  font-size: 14px;
+  text-shadow: 1px 1px 2px white;
+}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="drawer" class="open">
+  <input type="text" id="coordsInput" placeholder="lat, lon">
+  <div class="buttonRow">
+    <button id="addMarkerBtn">Add Marker</button>
+    <button id="clearMarkersBtn">Clear All Markers</button>
+    <button id="resetCounterBtn">Reset Numbering</button>
+    <button id="openTextBtn">Text File Edit</button>
+    <button id="chooseFileBtn">Load Route</button>
+    <button id="exportWptBtn">Export WPT</button>
+    <input type="file" id="fileInput" accept=".gpx" style="display:none;">
+  </div>
+  <div class="checkboxRow">
+    <label><input type="checkbox" id="keepOpenCheckbox"> Keep open after adding</label>
+    <label><input type="checkbox" id="freezeMapCheckbox"> Freeze map</label>
+    <label><input type="checkbox" id="dblClickCheckbox" checked> Disable double-click add</label>
+    <label><input type="checkbox" id="autoZoomCheckbox" checked> Enable Auto Zoom</label>
+  </div>
+</div>
+
+<button id="toggleDrawerBtn" aria-label="Toggle Drawer"></button>
+<button id="fullscreenBtn">⛶</button>
+<div id="positionBar">Waiting for GPS…</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-rotatedmarker/leaflet.rotatedMarker.js"></script>
+<script>
+const map = L.map('map').setView([54.971793, -2.949397], 16);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors | &copy; KC 2025'
+}).addTo(map);
+
+// --- Speech helper ---
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'en-GB';
+  utter.rate = 1;
+  speechSynthesis.speak(utter);
+}
+let spoken500 = false;
+
+// Drawer toggle
+const drawer = document.getElementById('drawer');
+const toggleBtn = document.getElementById('toggleDrawerBtn');
+function updateToggleButton() {
+  const isOpen = drawer.classList.contains('open');
+  toggleBtn.classList.toggle('arrow-up', isOpen);
+  toggleBtn.style.top = isOpen ? `${drawer.offsetHeight}px` : '0px';
+}
+toggleBtn.addEventListener('click', () => { drawer.classList.toggle('open'); updateToggleButton(); });
+window.addEventListener('resize', updateToggleButton);
+document.addEventListener('DOMContentLoaded', () => { setTimeout(updateToggleButton, 100); });
+
+// Fullscreen
+document.getElementById('fullscreenBtn').onclick = () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err=>console.warn(err));
+  else document.exitFullscreen();
+};
+
+// Follow Me button
+let following = false;
+L.Control.FollowMe = L.Control.extend({
+  onAdd: function(map) {
+    const btn = L.DomUtil.create('button', 'leaflet-bar followme-btn');
+    btn.innerHTML = '📍';
+    btn.title = "Toggle Follow Me";
+    btn.style.background = 'white';
+    btn.style.cursor = 'pointer';
+    btn.style.width = '34px';
+    btn.style.height = '34px';
+    btn.style.fontSize = '18px';
+    btn.style.lineHeight = '32px';
+    L.DomEvent.on(btn, 'click', e => {
+      L.DomEvent.stopPropagation(e);
+      following = !following;
+      btn.style.background = following ? '#007bff' : 'white';
+    });
+    return btn;
+  }
+});
+L.control.followMe = function(opts){ return new L.Control.FollowMe(opts); }
+L.control.followMe({position:'topleft'}).addTo(map);
+
+// GPS Marker
+let currentMarker = null;
+const posBar = document.getElementById('positionBar');
+let firstFix = true, lastLat=null, lastLon=null, lastTime=null, currentAngle=0, freezeMap=false;
+document.getElementById('freezeMapCheckbox').addEventListener('change', e=>freezeMap=e.target.checked);
+
+function createArrowIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<svg width="24" height="24" viewBox="0 0 24 24"><polygon points="12,0 24,24 12,18 0,24" fill="red"/></svg>`,
+    iconSize: [24,24],
+    iconAnchor: [12,12]
+  });
+}
+function lerp(a,b,t){ return a+(b-a)*t; }
+function lerpAngle(a,b,t){ const diff=((b-a+540)%360)-180; return a+diff*t; }
+
+// Auto Zoom toggle
+let autoZoomEnabled = true;
+document.getElementById('autoZoomCheckbox').addEventListener('change', e => {
+  autoZoomEnabled = e.target.checked;
+});
+let zoomedIn = false;
+let savedZoom = map.getZoom();
+
+navigator.geolocation.watchPosition(pos=>{
+  const lat=pos.coords.latitude, lon=pos.coords.longitude, now=pos.timestamp;
+  const heading=pos.coords.heading!==null?pos.coords.heading:currentAngle;
+  let speedText='';
+  if(lastLat!==null && lastLon!==null && lastTime!==null){
+    const distance=map.distance([lastLat,lastLon],[lat,lon]);
+    const timeDiff=(now-lastTime)/1000;
+    const speedMps=distance/timeDiff;
+    const speedMph=speedMps*2.23694;
+    if(speedMph>3) speedText=` | ${speedMph.toFixed(1)} mph`;
+  }
+  lastLat=lat; lastLon=lon; lastTime=now;
+  posBar.textContent=`Lat: ${lat.toFixed(5)} , Lon: ${lon.toFixed(5)}${speedText}`;
+  if(!freezeMap){
+    if(!currentMarker){
+      currentMarker=L.marker([lat,lon],{icon:createArrowIcon(),rotationAngle:heading}).addTo(map);
+      currentAngle=heading;
+    }else{
+      const ll=currentMarker.getLatLng();
+      currentMarker.setLatLng([lerp(ll.lat,lat,0.2),lerp(ll.lng,lon,0.2)]);
+      currentAngle=lerpAngle(currentAngle,heading,0.2);
+      currentMarker.setRotationAngle(currentAngle);
+    }
+    if(firstFix){ map.setView([lat,lon],16); firstFix=false; }
+    if(following) map.setView([lat,lon]);
+  }
+}, err=>console.warn(err), { enableHighAccuracy:true });
+
+// Marker management
+const userMarkers=[];
+let markerCount = parseInt(localStorage.getItem('markerCount')) || 0;
+
+function addNumberedMarker(lat, lon, num=null){
+  const number=num || ++markerCount;
+  if(!num) localStorage.setItem('markerCount', markerCount);
+  const m=L.marker([lat,lon],{draggable:true})
+    .addTo(map)
+    .bindTooltip(`${number}`, {permanent:true,direction:'center',className:'marker-label'})
+    .bindPopup(`Marker ${number}<br>Lat:${lat.toFixed(5)}, Lon:${lon.toFixed(5)}
+      <br><button onclick="renumberMarker(${userMarkers.length})">Renumber</button>
+      <button onclick="deleteMarker(${userMarkers.length})">Delete</button>`);
+
+  m.on('contextmenu', ()=> {
+    map.removeLayer(m);
+    const idx = userMarkers.findIndex(obj=>obj.marker===m);
+    if(idx!==-1) userMarkers.splice(idx,1);
+    renumberMarkers();
+    m.unbindPopup();
+  });
+
+  m.on('dragend', ()=> {
+    const ll=m.getLatLng();
+    m.setPopupContent(`Marker ${number}<br>Lat:${ll.lat.toFixed(5)}, Lon:${ll.lng.toFixed(5)}
+      <br><button onclick="renumberMarker(${userMarkers.indexOf(m)})">Renumber</button>
+      <button onclick="deleteMarker(${userMarkers.indexOf(m)})">Delete</button>`);
+  });
+
+  m.on('click', ()=> m.openPopup());
+
+  userMarkers.push({marker:m, number:number});
+  return m;
+}
+
+function renumberMarkers(){
+  userMarkers.forEach((mObj,i)=>{
+    if(mObj && mObj.marker){
+      mObj.number = i+1;
+      const ll = mObj.marker.getLatLng();
+      mObj.marker.unbindTooltip();
+      mObj.marker.bindTooltip(`${mObj.number}`,{permanent:true,direction:'center',className:'marker-label'});
+      mObj.marker.setPopupContent(`Marker ${mObj.number}<br>Lat:${ll.lat.toFixed(5)}, Lon:${ll.lng.toFixed(5)}
+        <br><button onclick="renumberMarker(${i})">Renumber</button>
+        <button onclick="deleteMarker(${i})">Delete</button>`);
+    }
+  });
+}
+
+function renumberMarker(index){
+  const mObj=userMarkers[index];
+  if(!mObj) return;
+  const newNum=parseInt(prompt("Enter new marker number:", mObj.number));
+  if(isNaN(newNum)) return;
+  mObj.number=newNum;
+  const ll=mObj.marker.getLatLng();
+  mObj.marker.unbindTooltip();
+  mObj.marker.bindTooltip(`${newNum}`,{permanent:true,direction:'center',className:'marker-label'});
+  mObj.marker.setPopupContent(`Marker ${newNum}<br>Lat:${ll.lat.toFixed(5)}, Lon:${ll.lng.toFixed(5)}
+      <br><button onclick="renumberMarker(${index})">Renumber</button>
+      <button onclick="deleteMarker(${index})">Delete</button>`);
+}
+
+function deleteMarker(index){
+  const mObj=userMarkers[index];
+  if(!mObj) return;
+  map.removeLayer(mObj.marker);
+  userMarkers.splice(index,1);
+  renumberMarkers();
+}
+
+// --- Export WPT to GPX ---
+document.getElementById('exportWptBtn').addEventListener('click', ()=> {
+  if (userMarkers.length === 0) return alert("No markers to export.");
+
+  let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  gpx += `<gpx version="1.1" creator="KC Map" xmlns="http://www.topografix.com/GPX/1/1">\n`;
+
+  userMarkers.forEach(mObj => {
+    const ll = mObj.marker.getLatLng();
+    gpx += `  <wpt lat="${ll.lat.toFixed(6)}" lon="${ll.lng.toFixed(6)}"><name>${mObj.number}</name></wpt>\n`;
+  });
+
+  gpx += `</gpx>`;
+
+  const blob = new Blob([gpx], { type: "application/gpx+xml" });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = "waypoints.gpx";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// --- Load GPX file with last file memory ---
+const fileInput = document.getElementById('fileInput');
+const chooseFileBtn = document.getElementById('chooseFileBtn');
+let lastFileName = localStorage.getItem('lastGPXFileName') || '';
+
+chooseFileBtn.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  localStorage.setItem('lastGPXFileName', file.name);
+
+  const reader = new FileReader();
+  reader.onload = event => {
+    const text = event.target.result;
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, "application/xml");
+
+    const ns = xml.documentElement.namespaceURI || null;
+    const wpts = ns ? xml.getElementsByTagNameNS(ns, 'wpt') : xml.getElementsByTagName('wpt');
+    const trkpts = ns ? xml.getElementsByTagNameNS(ns, 'trkpt') : xml.getElementsByTagName('trkpt');
+
+    const points = [];
+
+    function addPoints(nodes){
+      for (let i = 0; i < nodes.length; i++) {
+        const lat = parseFloat(nodes[i].getAttribute('lat'));
+        const lon = parseFloat(nodes[i].getAttribute('lon'));
+        const nameTag = nodes[i].getElementsByTagName('name')[0];
+        const num = nameTag ? parseInt(nameTag.textContent) : i + 1;
+        if (!isNaN(lat) && !isNaN(lon)) {
+          addNumberedMarker(lat, lon, num);
+          points.push([lat, lon]);
+        }
+      }
+    }
+
+    addPoints(wpts);
+    addPoints(trkpts);
+
+    if (points.length > 0) map.fitBounds(L.latLngBounds(points), { padding: [50, 50] });
+  };
+  reader.readAsText(file);
+});
+
+// Add marker button
+document.getElementById('addMarkerBtn').addEventListener('click', ()=> {
+  const input=document.getElementById('coordsInput').value.trim();
+  if(!input.includes(',')) return alert('Enter coordinates as lat, lon');
+  const [lat, lon]=input.split(',').map(Number);
+  if(isNaN(lat) || isNaN(lon)) return alert('Invalid numbers');
+  addNumberedMarker(lat, lon);
+  map.panTo([lat, lon]);
+  document.getElementById('coordsInput').value='';
+  if(!document.getElementById('keepOpenCheckbox').checked){ drawer.classList.remove('open'); updateToggleButton(); }
+});
+
+// Clear / reset buttons
+document.getElementById('clearMarkersBtn').addEventListener('click', ()=> {
+  userMarkers.forEach(mObj=>map.removeLayer(mObj.marker));
+  userMarkers.length=0;
+});
+document.getElementById('resetCounterBtn').addEventListener('click', ()=> {
+  markerCount=0;
+  localStorage.setItem('markerCount',0);
+  renumberMarkers();
+});
+
+// Open Text Edit (unchanged placeholder)
+document.getElementById('openTextBtn').addEventListener('click', ()=> alert('Text File Edit Placeholder'));
+
+// Double click toggle
+let dblClickDisabled=true;
+document.getElementById('dblClickCheckbox').addEventListener('change', e=>{
+  dblClickDisabled=e.target.checked;
+  if(dblClickDisabled) map.off('dblclick'); else map.on('dblclick', e=>addNumberedMarker(e.latlng.lat, e.latlng.lng));
+});
+if(!dblClickDisabled) map.on('dblclick', e=>addNumberedMarker(e.latlng.lat, e.latlng.lng));
+</script>
+</body>
+</html>

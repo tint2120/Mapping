@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>App Card Navigation</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-image: url("background2.png");
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      padding: 30px;
+      width: min(90%, 500px);
+      text-align: center;
+      backdrop-filter: blur(6px);
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 1.6em;
+      color: #333;
+    }
+
+    /* 🔹 Grid layout for 3 columns and up to 4 rows */
+    .btn-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      justify-items: center;
+    }
+
+    button {
+      font-size: 16px;
+      padding: 12px 8px;
+      width: 100%;
+      border-radius: 12px;
+      border: none;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    /* Default styles */
+    .b1 { background: linear-gradient(135deg, #4CAF50, #388E3C); }
+    .b2 { background: linear-gradient(135deg, #f44336, #d32f2f); }
+    .b3 { background: linear-gradient(135deg, #ff9800, #ef6c00); }
+    .b4 { background: linear-gradient(135deg, #2196f3, #1976d2); }
+    .b5 { background: linear-gradient(135deg, #9c27b0, #6a1b9a); }
+    .b6 { background: linear-gradient(135deg, #4CAF50, #388E3C); }
+	.b7 { background: linear-gradient(135deg, #f44336, #d32f2f); }
+    .b8 { background: linear-gradient(135deg, #ff9800, #ef6c00); }
+
+    /* Hover colors */
+    .b1:hover { background: linear-gradient(135deg, #66bb6a, #43a047); }
+    .b2:hover { background: linear-gradient(135deg, #e57373, #c62828); }
+    .b3:hover { background: linear-gradient(135deg, #ffb74d, #f57c00); }
+    .b4:hover { background: linear-gradient(135deg, #64b5f6, #1565c0); }
+    .b5:hover { background: linear-gradient(135deg, #ba68c8, #8e24aa); }
+    .b6:hover { background: linear-gradient(135deg, #66bb6a, #43a047); }
+	.b7:hover { background: linear-gradient(135deg, #e57373, #c62828); }
+    .b8:hover { background: linear-gradient(135deg, #ffb74d, #f57c00); }
+
+    /* Hover animation */
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>📱 Choose a Program</h1>
+    <div class="btn-container">
+      <button class="b1" onclick="window.location.href='Tracker.html'">Tracker</button>
+      <button class="b2" onclick="window.location.href='Geo-StopStart.html'">Geo Location</button>
+      <button class="b3" onclick="window.location.href='Route.html'">Route Planner</button>
+      <button class="b4" onclick="window.location.href='AutoZoomSoundV2GPX.html'">Live Mapping</button>
+      <button class="b5" onclick="window.location.href='GPXV2.html'">LatLonPCode-GPX</button>
+      <button class="b6" onclick="window.location.href='Speed.html'">Speed</button>
+      <button class="b7" onclick="window.location.href='BK.html'">Books</button>
+      <button class="b8" onclick="window.location.href='Password.html'">Redundancy</button>
+      <button class="b9" onclick="#">Button 9</button>
+      <button class="b10" onclick="#">Button 10</button>
+      <button class="b11" onclick="#">Button 11</button>
+      <button class="b12" onclick="#">Button 12</button>
+    </div>
+  </div>
+</body>
+</html>

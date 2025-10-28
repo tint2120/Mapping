@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Live Lat, Lon & Speed (mph)</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .frame {
+    border: 2px solid #444;
+    border-radius: 10px;
+    padding: 30px 50px;
+    background: #1a1a1a;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    text-align: center;
+  }
+  h1 { font-size: 22px; margin-bottom: 20px; }
+  .data { font-size: 24px; margin: 10px 0; }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <h1>Current Position & Speed (mph)</h1>
+    <div class="data">Lat: <span id="lat">—</span></div>
+    <div class="data">Lon: <span id="lon">—</span></div>
+    <div class="data">Speed: <span id="speed">—</span></div>
+    <div class="data" id="wakeStatus" style="font-size:14px;color:#aaa;margin-top:15px;">Keeping screen awake…</div>
+  </div>
+
+<script>
+let watchId = null;
+const latEl = document.getElementById('lat');
+const lonEl = document.getElementById('lon');
+const speedEl = document.getElementById('speed');
+const wakeStatus = document.getElementById('wakeStatus');
+const MPS_TO_MPH = 2.23694;
+let wakeLock = null;
+
+function start() {
+  if (!navigator.geolocation) {
+    alert('Geolocation not supported');
+    return;
+  }
+  if (watchId) return;
+
+  watchId = navigator.geolocation.watchPosition(pos => {
+    const c = pos.coords;
+    latEl.textContent = c.latitude.toFixed(6);
+    lonEl.textContent = c.longitude.toFixed(6);
+    if (c.speed !== null) {
+      speedEl.textContent = (c.speed * MPS_TO_MPH).toFixed(2);
+    } else {
+      speedEl.textContent = 'N/A';
+    }
+  }, err => alert(err.message), { enableHighAccuracy: true });
+}
+
+async function keepAwake() {
+  // Try Screen Wake Lock API first
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeStatus.textContent = 'Screen awake (Wake Lock API)';
+      wakeLock.addEventListener('release', () => {
+        wakeStatus.textContent = 'Wake Lock released';
+      });
+    } else {
+      throw new Error('Wake Lock not supported');
+    }
+  } catch (err) {
+    // Fallback to silent video trick
+    wakeStatus.textContent = 'Using fallback keep-awake';
+    const video = document.createElement('video');
+    video.setAttribute('muted', '');
+    video.setAttribute('playsinline', '');
+    video.loop = true;
+    video.src = 'data:video/mp4;base64,AAAAHGZ0eXBtcDQyAAAAAG1wNDFtcDQyaXNvbQAAABRnZGF0YQAAAAE=';
+    document.body.appendChild(video);
+    video.play().catch(()=>{});
+  }
+}
+
+window.onload = () => {
+  start();
+  keepAwake();
+};
+</script>
+</body>
+</html>
