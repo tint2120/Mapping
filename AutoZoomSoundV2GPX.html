@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -141,7 +142,7 @@ html, body { height: 100%; margin: 0; font-family: sans-serif; }
     <button id="addMarkerBtn">Add Marker</button>
     <button id="clearMarkersBtn">Clear All Markers</button>
     <button id="resetCounterBtn">Reset Numbering</button>
-    <button id="openTextBtn">Text File Edit</button>
+    <button id="openTextBtn">Enter Cords</button>
     <button id="chooseFileBtn">Load Route</button>
     <button id="exportWptBtn">Export WPT</button>
     <input type="file" id="fileInput" accept=".gpx" style="display:none;">
@@ -434,7 +435,10 @@ document.getElementById('resetCounterBtn').addEventListener('click', ()=> {
 });
 
 // Open Text Edit (unchanged placeholder)
-document.getElementById('openTextBtn').addEventListener('click', ()=> alert('Text File Edit Placeholder'));
+document.getElementById('openTextBtn').addEventListener('click', () => {
+  window.open('GPXV2.html', '_blank');
+});
+
 
 // Double click toggle
 let dblClickDisabled=true;
