@@ -1,0 +1,267 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geo Tracker App</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f0f2f5;
+      font-family: "Segoe UI", sans-serif;
+    }
+    .card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      width: min(95%, 450px);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      text-align: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.5em;
+      color: #333;
+    }
+    #map {
+      height: 300px;
+      width: 100%;
+      border-radius: 12px;
+    }
+    .btn-container {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      flex: 1;
+      min-width: 120px;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .start { background: linear-gradient(135deg, #4CAF50, #388E3C); }
+    .stop { background: linear-gradient(135deg, #f44336, #d32f2f); }
+    .clear { background: linear-gradient(135deg, #9E9E9E, #616161); }
+    .downloadCSV { background: linear-gradient(135deg, #2196F3, #1976D2); }
+    .downloadGPX { background: linear-gradient(135deg, #FF9800, #F57C00); }
+    button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    #status {
+      font-size: 14px;
+      color: #555;
+      min-height: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>📍 Geo Tracker</h1>
+  <div id="map"></div>
+  <div class="btn-container">
+    <button class="start" onclick="startRecording()">Start Recording</button>
+    <button class="stop" onclick="stopRecording()">Stop Recording</button>
+    <button class="clear" onclick="clearPath()">Clear Path</button>
+  </div>
+  <div class="btn-container">
+    <button class="downloadCSV" onclick="downloadCSVFile()" disabled>Download CSV</button>
+    <button class="downloadGPX" onclick="downloadGPXFile()" disabled>Download GPX</button>
+  </div>
+  <p id="status">Requesting location permission…</p>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+let map, marker, pathLine;
+let recording = false;
+let recordedCoords = [];
+let wakeLock = null;
+
+let lastRecordTime = 0; // Timestamp of last recorded coordinate
+let watchId = null;
+
+// Initialize map
+map = L.map('map').setView([51.505, -0.09], 15);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+marker = L.marker([51.505, -0.09]).addTo(map);
+pathLine = L.polyline([], {color: 'blue'}).addTo(map);
+
+const statusEl = document.getElementById("status");
+const csvBtn = document.querySelector(".downloadCSV");
+const gpxBtn = document.querySelector(".downloadGPX");
+
+// Wake Lock
+async function enableWakeLock() {
+  try {
+    wakeLock = await navigator.wakeLock?.request("screen");
+  } catch (err) {
+    console.warn("Wake Lock not supported:", err);
+  }
+}
+function disableWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+
+// Start tracking automatically
+function startTracking() {
+  if (!navigator.geolocation) {
+    statusEl.innerText = "❌ Geolocation not supported.";
+    return;
+  }
+
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+  }
+  watchId = navigator.geolocation.watchPosition(updatePosition, geoError, {
+    enableHighAccuracy: true,
+    maximumAge: 5000,
+    timeout: 10000
+  });
+
+  // Initial wake lock request
+enableWakeLock();
+
+// Re-request wake lock every 5 minutes (300000 ms)
+setInterval(enableWakeLock, 300000);
+}
+
+// Variable interval recording logic
+function getRecordingInterval(speedKmh) {
+  if (typeof speedKmh !== "number" || isNaN(speedKmh)) return 3000; // default: 3s if no speed
+  if (speedKmh < 3) return 3000;      // Below 3km/h: every 3s
+  if (speedKmh > 80) return 20000;    // Over 80km/h: every 20s
+  if (speedKmh > 30) return 10000;    // Over 30km/h: every 10s
+  return 3000; // Between 3-30km/h: every 3s
+}
+
+// Update live marker and optionally record path (with speed display)
+function updatePosition(position) {
+  const lat = position.coords.latitude;
+  const lon = position.coords.longitude;
+  const acc = position.coords.accuracy.toFixed(1); // accuracy in meters
+
+  // Speed in m/s, convert to km/h
+  const rawSpeed = position.coords.speed;
+  let speedKmh = 0;
+  let speedText = "";
+  if (typeof rawSpeed === "number" && !isNaN(rawSpeed)) {
+    speedKmh = rawSpeed * 3.6;
+    speedText = `, Speed: ${speedKmh.toFixed(2)} km/h`;
+  }
+
+  marker.setLatLng([lat, lon]);
+  map.setView([lat, lon]);
+
+  // Variable recording interval logic
+  if (recording) {
+    const now = Date.now();
+    const interval = getRecordingInterval(speedKmh);
+    if (now - lastRecordTime >= interval) {
+      recordedCoords.push({lat, lon, speed: speedKmh, accuracy: acc, time: new Date().toISOString()});
+      pathLine.setLatLngs(recordedCoords.map(c => [c.lat, c.lon]));
+      lastRecordTime = now;
+      if (recordedCoords.length > 1) {
+        csvBtn.disabled = false;
+        gpxBtn.disabled = false;
+      }
+    }
+  }
+
+  statusEl.innerText = `Lat: ${lat.toFixed(5)}, Lon: ${lon.toFixed(5)}, ±${acc}m${speedText}`;
+}
+
+function geoError(error) {
+  statusEl.innerText = "⚠️ Error getting location: " + error.message;
+}
+
+// Recording controls
+function startRecording() {
+  recording = true;
+  recordedCoords = [];
+  pathLine.setLatLngs([]);
+  lastRecordTime = 0;
+  statusEl.innerText = "🟢 Recording started.";
+  csvBtn.disabled = true;
+  gpxBtn.disabled = true;
+}
+
+function stopRecording() {
+  recording = false;
+  statusEl.innerText = "⏹ Recording stopped.";
+}
+
+function clearPath() {
+  recording = false;
+  recordedCoords = [];
+  pathLine.setLatLngs([]);
+  statusEl.innerText = "🧹 Path cleared.";
+  csvBtn.disabled = true;
+  gpxBtn.disabled = true;
+}
+
+// Download CSV
+function downloadCSVFile() {
+  let csv = "Latitude,Longitude,Speed(km/h),Accuracy(m),Time\n";
+  recordedCoords.forEach(c => {
+    csv += `${c.lat},${c.lon},${c.speed || ""},${c.accuracy || ""},${c.time || ""}\n`;
+  });
+  downloadFile("track.csv", csv, "text/csv");
+}
+
+// Download GPX
+function downloadGPXFile() {
+  let gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="GeoTracker" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>GPS Track</name>
+    <trkseg>`;
+  recordedCoords.forEach(c => {
+    gpx += `\n      <trkpt lat="${c.lat}" lon="${c.lon}">
+        ${c.time ? `<time>${c.time}</time>` : ""}
+        ${c.speed ? `<speed>${c.speed}</speed>` : ""}
+        ${c.accuracy ? `<accuracy>${c.accuracy}</accuracy>` : ""}
+      </trkpt>`;
+  });
+  gpx += `
+    </trkseg>
+  </trk>
+</gpx>`;
+  downloadFile("track.gpx", gpx, "application/gpx+xml");
+}
+
+// Helper download function
+function downloadFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Stop Wake Lock on page unload
+window.addEventListener("beforeunload", disableWakeLock);
+
+// Trigger tracking automatically
+window.addEventListener('load', startTracking);
+</script>
+
+</body>
+</html>
