@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Books Table (Read-Only)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 p-6">
+  <h1 class="text-2xl font-bold mb-4">📚 My Books (Read-Only)</h1>
+
+  <div class="overflow-auto rounded-xl border border-slate-300 bg-white shadow p-2">
+    <table id="bookTable" class="min-w-full text-sm border-collapse">
+      <thead class="bg-slate-200"></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    async function loadTable() {
+      try {
+        const res = await fetch("books.txt"); // same folder as HTML
+        const text = await res.text();
+
+        const lines = text.split(/\r?\n/).filter(Boolean);
+        const headers = lines.shift().split(",");
+
+        const table = document.getElementById("bookTable");
+        const thead = table.querySelector("thead");
+        const tbody = table.querySelector("tbody");
+
+        // Build header
+thead.innerHTML = "<tr>" + headers.map(h => 
+  `<th class="px-2 py-1 border font-bold text-left text-lg">${h}</th>`
+).join("") + "</tr>";
+
+// Build rows
+tbody.innerHTML = "";
+lines.forEach(line => {
+  const cols = line.split(",");
+  const row = "<tr>" + cols.map((c, i) => 
+    `<td class="px-2 py-1 border ${i === 0 ? 'font-bold text-base text-left' : 'text-sm text-left'}">${c}</td>`
+  ).join("") + "</tr>";
+  tbody.innerHTML += row;
+});
+
+
+
+      } catch (err) {
+        console.error("Error loading file:", err);
+      }
+    }
+
+    loadTable();
+  </script>
+</body>
+</html>

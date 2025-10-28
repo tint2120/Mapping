@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Employment & Age Calculator</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f7fb; color: #222; margin: 0; padding: 20px; }
+    h1 { font-size: 1.6rem; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+    label { display: block; margin-top: 12px; font-weight: 600; }
+    input { padding: 8px; border: 1px solid #ccc; border-radius: 6px; width: 100%; max-width: 280px; }
+    button { margin-top: 20px; padding: 10px 16px; border: none; border-radius: 6px; background: #0078d7; color: white; font-weight: 600; cursor: pointer; }
+    button:hover { background: #005fa3; }
+    .results { margin-top: 20px; }
+    .results p { margin: 6px 0; }
+    strong { color: #0078d7; }
+  </style>
+</head>
+<body>
+  <h1>Employment & Age Calculator</h1>
+
+  <div class="card">
+    <label for="startDate">Employment Start Date:</label>
+    <input type="date" id="startDate" />
+
+    <label for="weeklyPay">Weekly Pay (£):</label>
+    <input type="number" id="weeklyPay" step="0.01" />
+
+    <label for="birthDate">Birthdate (YYYY-MM-DD):</label>
+    <input type="password" id="birthDate" placeholder="Enter your birthdate" />
+
+    <button onclick="calculate()">Calculate</button>
+
+    <div class="results" id="results"></div>
+  </div>
+
+  <script>
+    function dateDiff(d1, d2) {
+      let years = d2.getFullYear() - d1.getFullYear();
+      let days = Math.floor((d2 - new Date(d1.getFullYear() + years, d1.getMonth(), d1.getDate())) / (1000*60*60*24));
+      if (days < 0) {
+        years--;
+        days = Math.floor((d2 - new Date(d1.getFullYear() + years, d1.getMonth(), d1.getDate())) / (1000*60*60*24));
+      }
+      return { years, days };
+    }
+
+    function calculate() {
+      const startDateVal = document.getElementById('startDate').value;
+      const weeklyPayVal = document.getElementById('weeklyPay').value;
+      const birthDateVal = document.getElementById('birthDate').value;
+
+      if (!startDateVal || !weeklyPayVal || !birthDateVal) {
+        document.getElementById('results').innerHTML = "<p>Please fill in all fields.</p>";
+        return;
+      }
+
+      // Save to localStorage
+      localStorage.setItem('startDate', startDateVal);
+      localStorage.setItem('weeklyPay', weeklyPayVal);
+      localStorage.setItem('birthDate', birthDateVal);
+
+      const startDate = new Date(startDateVal);
+      const weeklyPay = parseFloat(weeklyPayVal);
+      const birthDate = new Date(birthDateVal);
+      const today = new Date();
+
+      // Employment duration
+      const worked = dateDiff(startDate, today);
+
+      // Redundancy pay (weekly pay × 1.5 × full years worked)
+      const redundancyPay = (weeklyPay * 1.5 * worked.years).toFixed(2);
+
+      // Age now
+      const age = dateDiff(birthDate, today);
+
+      // Time until 67
+      const age67 = new Date(birthDate);
+      age67.setFullYear(birthDate.getFullYear() + 67);
+      const until67 = dateDiff(today, age67);
+
+      document.getElementById('results').innerHTML = `
+        <p><strong>Employment Duration:</strong> ${worked.years} years, ${worked.days} days</p>
+        <p><strong>Redundancy Pay:</strong> £${redundancyPay}</p>
+        <p><strong>Your Age:</strong> ${age.years} years, ${age.days} days</p>
+        <p><strong>Time Until Age 67:</strong> ${until67.years} years, ${until67.days} days</p>
+      `;
+    }
+
+    // Load saved values on page load
+    window.onload = function() {
+      const startDate = localStorage.getItem('startDate');
+      const weeklyPay = localStorage.getItem('weeklyPay');
+      const birthDate = localStorage.getItem('birthDate');
+
+      if (startDate) document.getElementById('startDate').value = startDate;
+      if (weeklyPay) document.getElementById('weeklyPay').value = weeklyPay;
+      if (birthDate) document.getElementById('birthDate').value = birthDate;
+    }
+  </script>
+</body>
+</html>
