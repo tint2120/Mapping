@@ -61,7 +61,7 @@ th,td{
 th{background:#f3f4f6;}
 td{font-size:14px;}
 .deleteBtn {
-  background:#ef4444;
+  background:transparent;
   color:white;
   border:none;
   border-radius:6px;
@@ -69,7 +69,7 @@ td{font-size:14px;}
   cursor:pointer;
   font-size:13px;
 }
-.deleteBtn:hover { background:#dc2626; }
+ 
 </style>
 </head>
 <body>
@@ -88,7 +88,7 @@ td{font-size:14px;}
 
 <hr style="margin:15px 0">
 
-<input type="text" id="searchBox" placeholder="Enter postcode (e.g. CA6 6AA)" style="width:250px;"><br>
+<input type="text" id="searchBox" placeholder="Enter postcode (e.g. CA8 1NY)" style="width:250px;"><br>
 <input type="text" id="customerBox" placeholder="Enter customer name (optional)" style="width:250px;"><br>
 <button id="searchBtn" style="background:#10b981;">Search</button>
 <button id="loadFileBtn" style="background:#f59e0b;">Load Search File</button>
@@ -96,7 +96,7 @@ td{font-size:14px;}
 
 <table id="pointsTable">
 <thead>
-<tr><th>#</th><th>Name / Index</th><th>Lat</th><th>Lon</th><th>Action</th></tr>
+<tr><th>#</th><th>Name / Index</th><th>Lat</th><th>Lon</th><th>Delete</th></tr>
 </thead>
 <tbody></tbody>
 </table>
@@ -127,7 +127,7 @@ function updateTable(){
       <td>${p.name}</td>
       <td>${p.lat.toFixed(6)}</td>
       <td>${p.lon.toFixed(6)}</td>
-      <td><button class="deleteBtn" onclick="deleteRow(${i})">🗑️</button></td>
+      <td><button class="deleteBtn" onclick="deleteRow(${i})">❌</button></td>
     </tr>
   `).join("");
 }
@@ -232,4 +232,3 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
-
