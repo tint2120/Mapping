@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GPX Point Entry Tool</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+  h2 { text-align: center; font-size: 20px; }
+  #controls {
+    display: flex;
+    flex-direction: column;
+    max-width: 450px;
+    margin: 0 auto 20px auto;
+    gap: 6px;
+  }
+  input, select, button { padding: 6px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc; }
+  button {
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    color: white;
+  }
+  #addBtn { background-color: #10b981; }         
+  #searchBtn { background-color: #3b82f6; }      
+  #exportBtn { background-color: #6366f1; }      
+  #clearAllBtn { background-color: #ef4444; }    
+  #addSelectedBtn { background-color: #f97316; } 
+  button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+  .table-container {
+    overflow-x: auto;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: auto;
+    min-width: 100%;
+    background: white;
+  }
+
+  th, td {
+    border: 1px solid #ddd;
+    padding: 4px;           
+    text-align: left;
+    white-space: nowrap;
+    font-size: 12px;        
+  }
+
+  th {
+    background: #007acc;
+    color: white;
+  }
+
+  th:last-child, td:last-child {
+    min-width: 55px;
+    width: auto;
+  }
+
+  #fileInfo { font-size: 13px; color: #444; text-align: center; }
+  #matchSelect { margin-top: 4px; display: none; width: 100%; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h2>GPX Point Entry Tool</h2>
+
+<div id="controls">
+  <input type="file" id="fileInput" accept=".txt,.csv">
+  <div id="fileInfo"></div>
+
+  <input type="text" id="searchBox" placeholder="Search Name or Postcode">
+  <button id="searchBtn">Search</button>
+
+  <select id="matchSelect" size="4"></select>
+  <button id="addSelectedBtn" style="display:none; margin-top:4px;">Add Selected</button>
+
+  <input type="text" id="nameBox" placeholder="Enter Name (optional)">
+  <input type="text" id="latBox" placeholder="Enter Latitude">
+  <input type="text" id="lonBox" placeholder="Enter Longitude">
+  <button id="addBtn">Add Point</button>
+  <button id="exportBtn">Export GPX</button>
+  <button id="clearAllBtn">Clear All</button>
+</div>
+
+<div class="table-container">
+  <table id="pointsTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Latitude</th>
+        <th>Longitude</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+let customerData = [];
+
+// Autoload file when selected
+document.getElementById('fileInput').addEventListener('change', () => {
+  const file = document.getElementById('fileInput').files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    customerData = e.target.result.split(/\r?\n/).filter(Boolean);
+    document.getElementById('fileInfo').innerText = `Loaded: ${file.name} (${customerData.length} entries)`;
+  };
+  reader.readAsText(file);
+});
+
+// Search functionality with auto-insert if single match
+document.getElementById('searchBtn').addEventListener('click', () => {
+  const search = document.getElementById('searchBox').value.trim().toLowerCase();
+  const matchSelect = document.getElementById('matchSelect');
+  const addSelectedBtn = document.getElementById('addSelectedBtn');
+
+  matchSelect.innerHTML = '';
+  matchSelect.style.display = 'none';
+  addSelectedBtn.style.display = 'none';
+
+  if (!search) return;
+
+  const matches = customerData.filter(line => line.toLowerCase().includes(search));
+
+  if (matches.length === 0) {
+    alert("No matches found.");
+  } else if (matches.length === 1) {
+    insertLine(matches[0]); // Auto-insert single match
+  } else {
+    matches.forEach(m => {
+      const opt = document.createElement('option');
+      opt.textContent = m;
+      matchSelect.appendChild(opt);
+    });
+    matchSelect.style.display = 'block';
+  }
+
+  document.getElementById('searchBox').value = '';
+});
+
+// Multi-match selection
+const matchSelect = document.getElementById('matchSelect');
+const addSelectedBtn = document.getElementById('addSelectedBtn');
+
+matchSelect.addEventListener('change', () => {
+  addSelectedBtn.style.display = 'inline-block';
+});
+
+addSelectedBtn.addEventListener('click', () => {
+  const value = matchSelect.value;
+  if (value) {
+    insertLine(value);
+    matchSelect.style.display = 'none';
+    addSelectedBtn.style.display = 'none';
+  }
+});
+
+// Manual add button
+document.getElementById('addBtn').addEventListener('click', () => {
+  const name = document.getElementById('nameBox').value.trim() || "Unnamed";
+  const lat = document.getElementById('latBox').value.trim();
+  const lon = document.getElementById('lonBox').value.trim();
+  if (!lat || !lon) return alert("Please enter both latitude and longitude.");
+  insertLine(`${name},${lat},${lon}`);
+  document.getElementById('nameBox').value = '';
+  document.getElementById('latBox').value = '';
+  document.getElementById('lonBox').value = '';
+});
+
+// Export GPX
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const tbody = document.querySelector('#pointsTable tbody');
+  if (tbody.rows.length === 0) return alert("No points to export.");
+
+  let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="GPX Tool" xmlns="http://www.topografix.com/GPX/1/1">\n`;
+  for (let row of tbody.rows) {
+    const name = row.cells[0].textContent;
+    const lat = row.cells[1].textContent;
+    const lon = row.cells[2].textContent;
+    gpx += `  <wpt lat="${lat}" lon="${lon}"><name>${name}</name></wpt>\n`;
+  }
+  gpx += `</gpx>`;
+
+  const blob = new Blob([gpx], { type: "application/gpx+xml" });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = "points.gpx";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// Clear all table rows
+document.getElementById('clearAllBtn').addEventListener('click', () => {
+  document.querySelector('#pointsTable tbody').innerHTML = '';
+});
+
+// Parse each line
+function parseLine(line) {
+  line = line.replace(/"/g,'').trim();
+  if (!line) return { name: "Unknown", lat: null, lon: null };
+
+  let parts = line.split(/[\t,]+|\s{2,}/).filter(Boolean);
+  if (parts.length < 3) return { name: line, lat: null, lon: null };
+
+  let lat = null, lon = null, numericCount = 0;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (!isNaN(parts[i])) {
+      if (lon === null) lon = parts[i];
+      else if (lat === null) lat = parts[i];
+      numericCount++;
+      if (numericCount >= 2) break;
+    }
+  }
+
+  const latIndex = parts.lastIndexOf(lat);
+  const nameParts = parts.slice(0, latIndex);
+  const name = nameParts.join(' ').trim();
+  return { name: name || "Unknown", lat, lon };
+}
+
+// Insert into table
+function insertLine(line) {
+  const { name, lat, lon } = parseLine(line);
+  if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+    alert("Invalid coordinates found in line:\n" + line);
+    return;
+  }
+  const tbody = document.querySelector('#pointsTable tbody');
+  const row = tbody.insertRow();
+  row.insertCell(0).textContent = name;
+  row.insertCell(1).textContent = lat;
+  row.insertCell(2).textContent = lon;
+  const delCell = row.insertCell(3);
+  const btn = document.createElement('button');
+  btn.textContent = '🗑️';
+  btn.onclick = () => row.remove();
+  delCell.appendChild(btn);
+}
+</script>
+
+</body>
+</html>
