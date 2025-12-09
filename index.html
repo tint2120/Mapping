@@ -1,108 +1,322 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>App Card Navigation</title>
-  <style>
-    body {
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-image: url("background2.png");
-      background-size: contain;
-      background-position: center;
-      background-repeat: no-repeat;
-    }
+    <meta charset="UTF-8">
+    <title>GPX Point Entry Tool</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; margin-top: 60px; background: #f4f4f4; }
+        h2 { text-align: center; font-size: 20px; }
+        #controls {
+            display: flex;
+            flex-direction: column;
+            max-width: 450px;
+            margin: 0 auto 20px auto;
+            gap: 6px;
+        }
+        input, select, button { padding: 6px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc; }
+        button {
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: white;
+        }
+        #addBtn { background-color: #10b981; }
+        #searchBtn { background-color: #3b82f6; }
+        #exportBtn { background-color: #6366f1; }
+        #clearAllBtn { background-color: #ef4444; }
+        #addSelectedBtn { background-color: #f97316; }
+        button:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-    .card {
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 20px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-      padding: 30px;
-      width: min(90%, 500px);
-      text-align: center;
-      backdrop-filter: blur(6px);
-    }
+        .table-container {
+            overflow-x: auto;
+            width: 100%;
+            margin-top: 10px;
+        }
 
-    h1 {
-      margin-bottom: 20px;
-      font-size: 1.6em;
-      color: #333;
-    }
+        table {
+            border-collapse: collapse;
+            width: auto;
+            min-width: 100%;
+            background: white;
+        }
 
-    /* 🔹 Grid layout for 3 columns and up to 4 rows */
-    .btn-container {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      justify-items: center;
-    }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 4px;
+            text-align: left;
+            white-space: nowrap;
+            font-size: 12px;
+        }
 
-    button {
-      font-size: 16px;
-      padding: 12px 8px;
-      width: 100%;
-      border-radius: 12px;
-      border: none;
-      color: white;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
+        th {
+            background: #007acc;
+            color: white;
+        }
 
-    /* Default styles */
-    .b1 { background: linear-gradient(135deg, #4CAF50, #388E3C); }
-    .b2 { background: linear-gradient(135deg, #f44336, #d32f2f); }
-    .b3 { background: linear-gradient(135deg, #ff9800, #ef6c00); }
-    .b4 { background: linear-gradient(135deg, #2196f3, #1976d2); }
-    .b5 { background: linear-gradient(135deg, #9c27b0, #6a1b9a); }
-    .b6 { background: linear-gradient(135deg, #4CAF50, #388E3C); }
-	.b7 { background: linear-gradient(135deg, #f44336, #d32f2f); }
-    .b8 { background: linear-gradient(135deg, #ff9800, #ef6c00); }
+        th:last-child, td:last-child {
+            min-width: 55px;
+            width: auto;
+        }
 
-    /* Hover colors */
-    .b1:hover { background: linear-gradient(135deg, #66bb6a, #43a047); }
-    .b2:hover { background: linear-gradient(135deg, #e57373, #c62828); }
-    .b3:hover { background: linear-gradient(135deg, #ffb74d, #f57c00); }
-    .b4:hover { background: linear-gradient(135deg, #64b5f6, #1565c0); }
-    .b5:hover { background: linear-gradient(135deg, #ba68c8, #8e24aa); }
-    .b6:hover { background: linear-gradient(135deg, #66bb6a, #43a047); }
-	.b7:hover { background: linear-gradient(135deg, #e57373, #c62828); }
-    .b8:hover { background: linear-gradient(135deg, #ffb74d, #f57c00); }
-
-    /* Hover animation */
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    button:active {
-      transform: translateY(0);
-      box-shadow: none;
-    }
-  </style>
+        #fileInfo { font-size: 13px; color: #444; text-align: center; }
+        #matchSelect { margin-top: 4px; display: none; width: 100%; font-size: 13px; }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <h1>📱 Choose a Program</h1>
-    <div class="btn-container">
-      <button class="b1" onclick="window.location.href='Tracker.html'">Tracker</button>
-      <button class="b2" onclick="window.location.href='Geo-StopStart.html'">Geo Location</button>
-      <button class="b3" onclick="window.location.href='Route.html'">Route Planner</button>
-      <button class="b4" onclick="window.location.href='AutoZoomSoundV2GPX.html'">Live Mapping</button>
-      <button class="b5" onclick="window.location.href='GPXV5.html'">LatLonPCode-GPX</button>
-      <button class="b6" onclick="window.location.href='Speed.html'">Speed</button>
-      <button class="b7" onclick="window.location.href='BK.html'">Books</button>
-      <button class="b8" onclick="window.location.href='Password.html'">Redundancy</button>
-      <button class="b9" onclick="#">Button 9</button>
-      <button class="b10" onclick="#">Button 10</button>
-      <button class="b11" onclick="#">Button 11</button>
-      <button class="b12" onclick="#">Button 12</button>
+
+<h2>GPX Point Entry Tool</h2>
+
+<div id="controls">
+    <input type="file" id="fileInput" accept=".txt,.csv">
+    <div id="fileInfo"></div>
+
+    <input type="text" id="searchBox" placeholder="Search Name or Postcode">
+    <button id="searchBtn">Search</button>
+
+    <select id="matchSelect" size="4"></select>
+    <button id="addSelectedBtn" style="display:none; margin-top:4px;">Add Selected</button>
+
+    <input type="text" id="nameBox" placeholder="Enter Name (optional)">
+    <input type="text" id="latBox" placeholder="Enter Latitude">
+    <input type="text" id="lonBox" placeholder="Enter Longitude">
+    <button id="addBtn">Add Point</button>
+    <button id="exportBtn">Export GPX</button>
+    <button id="clearSearchBtn" style="background-color:#6b7280;">Clear Search</button>
+	<button id="clearAllBtn">Clear All</button>
+
+    <div id="currentPos" style="font-size:14px; text-align:center; margin-top:6px; color:#333;">
+        Current Position: Getting GPS...
     </div>
-  </div>
+</div>
+
+<div class="table-container">
+    <table id="pointsTable">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Latitude</th>
+            <th>Longitude</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+    let customerData = [];
+
+    // NEW — GPS updater (CORRECTED/IMPROVED)
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            pos => {
+                // SUCCESS: Update the element with the coordinates
+                const lat = pos.coords.latitude.toFixed(6);
+                const lon = pos.coords.longitude.toFixed(6);
+                document.getElementById('currentPos').innerText =
+                    `Current Position: ${lat}, ${lon}`;
+                document.getElementById('currentPos').style.color = '#10b981'; // Success color
+            },
+            err => {
+                // ERROR: Show the specific error message
+                let errorMsg;
+                switch (err.code) {
+                    case err.PERMISSION_DENIED:
+                        errorMsg = "Access Denied. Ensure Android permission is granted.";
+                        break;
+                    case err.POSITION_UNAVAILABLE:
+                        errorMsg = "Location information is unavailable.";
+                        break;
+                    case err.TIMEOUT:
+                        errorMsg = "Timeout. Check GPS signal or try again.";
+                        break;
+                    default:
+                        errorMsg = "An unknown GPS error occurred.";
+                }
+                document.getElementById('currentPos').innerText = `GPS Error: ${errorMsg}`;
+                document.getElementById('currentPos').style.color = '#ef4444'; // Error color
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000, // Increased timeout to 10 seconds
+                maximumAge: 0 // Force a fresh location retrieval
+            }
+        );
+    } else {
+        document.getElementById('currentPos').innerText = "GPS not supported.";
+        document.getElementById('currentPos').style.color = '#333';
+    }
+    // END NEW
+
+    // Autoload file when selected
+    document.getElementById('fileInput').addEventListener('change', () => {
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            customerData = e.target.result.split(/\r?\n/).filter(Boolean);
+            document.getElementById('fileInfo').innerText = `Loaded: ${file.name} (${customerData.length} entries)`;
+        };
+        reader.readAsText(file);
+    });
+
+    // Search functionality
+    document.getElementById('searchBtn').addEventListener('click', () => {
+        const search = document.getElementById('searchBox').value.trim().toLowerCase();
+        const matchSelect = document.getElementById('matchSelect');
+        const addSelectedBtn = document.getElementById('addSelectedBtn');
+
+        matchSelect.innerHTML = '';
+        matchSelect.style.display = 'none';
+        addSelectedBtn.style.display = 'none';
+
+        if (!search) return;
+
+        const matches = customerData.filter(line => line.toLowerCase().includes(search));
+
+        if (matches.length === 0) {
+            alert("No matches found.");
+        } else if (matches.length === 1) {
+            insertLine(matches[0]);
+        } else {
+            matches.forEach(m => {
+                const opt = document.createElement('option');
+                opt.textContent = m;
+                matchSelect.appendChild(opt);
+            });
+            matchSelect.style.display = 'block';
+        }
+
+        document.getElementById('searchBox').value = '';
+    });
+
+    // Multi-match selection
+    const matchSelect = document.getElementById('matchSelect');
+    const addSelectedBtn = document.getElementById('addSelectedBtn');
+
+    matchSelect.addEventListener('change', () => {
+        addSelectedBtn.style.display = 'inline-block';
+    });
+
+    addSelectedBtn.addEventListener('click', () => {
+        const value = matchSelect.value;
+        if (value) {
+            insertLine(value);
+            matchSelect.style.display = 'none';
+            addSelectedBtn.style.display = 'none';
+        }
+    });
+
+    // Manual add
+    document.getElementById('addBtn').addEventListener('click', () => {
+        const name = document.getElementById('nameBox').value.trim() || "Unnamed";
+        const lat = document.getElementById('latBox').value.trim();
+        const lon = document.getElementById('lonBox').value.trim();
+        if (!lat || !lon) return alert("Please enter both latitude and longitude.");
+        insertLine(`${name},${lat},${lon}`);
+        document.getElementById('nameBox').value = '';
+        document.getElementById('latBox').value = '';
+        document.getElementById('lonBox').value = '';
+    });
+
+   // Export GPX
+document.getElementById('exportBtn').addEventListener('click', () => {
+    const tbody = document.querySelector('#pointsTable tbody');
+    if (tbody.rows.length === 0) return alert("No points to export.");
+
+    let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n` +
+              `<gpx version="1.1" creator="GPX Tool" xmlns="http://www.topografix.com/GPX/1/1">\n`;
+
+    for (let row of tbody.rows) {
+        const name = row.cells[0].textContent;
+        const lat = row.cells[1].textContent;
+        const lon = row.cells[2].textContent;
+
+        gpx +=
+`  <wpt lat="${lat}" lon="${lon}">
+    <name>${name}</name>
+    <sym>Dot</sym>
+    <type>Marks</type>
+    <extensions>
+      <color>0000ff</color>
+    </extensions>
+  </wpt>\n`;
+    }
+
+    gpx += `</gpx>`;
+
+    if (window.Android && window.Android.saveGPX) {
+        window.Android.saveGPX(gpx, "points");
+    } else {
+        const blob = new Blob([gpx], { type: "application/gpx+xml" });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "points.gpx";
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+});
+
+	// Clear Search ONLY
+	document.getElementById('clearSearchBtn').addEventListener('click', () => {
+    matchSelect.innerHTML = '';
+    matchSelect.style.display = 'none';
+    addSelectedBtn.style.display = 'none';
+	});
+
+
+    // Clear all table rows
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
+        document.querySelector('#pointsTable tbody').innerHTML = '';
+		// ALSO CLEAR THE ADDRESS SELECTION BOX (same as Add Selected behaviour)
+    matchSelect.innerHTML = '';
+    matchSelect.style.display = 'none';
+    addSelectedBtn.style.display = 'none';
+
+    });
+
+    // Parse line
+    function parseLine(line) {
+        line = line.replace(/"/g,'').trim();
+        if (!line) return { name: "Unknown", lat: null, lon: null };
+        let parts = line.split(/[\t,]+|\s{2,}/).filter(Boolean);
+        if (parts.length < 3) return { name: line, lat: null, lon: null };
+        let lat = null, lon = null, numericCount = 0;
+        for (let i = parts.length - 1; i >= 0; i--) {
+            if (!isNaN(parts[i])) {
+                if (lon === null) lon = parts[i];
+                else if (lat === null) lat = parts[i];
+                numericCount++;
+                if (numericCount >= 2) break;
+            }
+        }
+        const latIndex = parts.lastIndexOf(lat);
+        const nameParts = parts.slice(0, latIndex);
+        const name = nameParts.join(' ').trim();
+        return { name: name || "Unknown", lat, lon };
+    }
+
+    // Insert line into table
+    function insertLine(line) {
+        const { name, lat, lon } = parseLine(line);
+        if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+            alert("Invalid coordinates found in line:\n" + line);
+            return;
+        }
+        const tbody = document.querySelector('#pointsTable tbody');
+        const row = tbody.insertRow();
+        row.insertCell(0).textContent = name;
+        row.insertCell(1).textContent = lat;
+        row.insertCell(2).textContent = lon;
+        const delCell = row.insertCell(3);
+        const btn = document.createElement('button');
+        btn.textContent = '🗑️';
+        btn.onclick = () => row.remove();
+        delCell.appendChild(btn);
+    }
+</script>
+
 </body>
 </html>
-
-
